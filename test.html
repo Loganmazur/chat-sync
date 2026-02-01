@@ -72,6 +72,31 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
+        .video-placeholder {
+            width: 100%;
+            height: 600px;
+            background: linear-gradient(135deg, #2a2a2e 0%, #3a3a3e 100%);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #888;
+            font-size: 1.2em;
+        }
+
+        .video-placeholder-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .video-placeholder-text {
+            text-align: center;
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
         .controls {
             margin-top: 15px;
             padding: 15px;
@@ -277,20 +302,31 @@
             <div class="video-section">
                 <div class="section-card">
                     <h2 class="section-title">Video Player</h2>
+                    
+                    <!-- Video Placeholder (shown initially) -->
+                    <div class="video-placeholder" id="videoPlaceholder">
+                        <div class="video-placeholder-icon">📺</div>
+                        <div class="video-placeholder-text">
+                            Enter a YouTube Video ID below to start watching
+                        </div>
+                    </div>
+
+                    <!-- Video iframe (hidden initially) -->
                     <iframe 
                         id="youtubeVideo"
                         width="100%" 
                         height="600" 
-                        src="https://www.youtube.com/embed/Lj2J6Ar1HNo" 
+                        style="display: none;"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                         allowfullscreen>
                     </iframe>
+
                     <div class="controls">
                         <div class="input-group">
                             <label>YouTube Video ID</label>
-                            <input type="text" id="videoId" placeholder="e.g., dQw4w9WgXcQ">
+                            <input type="text" id="videoId" placeholder="e.g., dQw4w9WgXcQ or Lj2J6Ar1HNo">
                         </div>
-                        <button onclick="updateVideo()">Update Video</button>
+                        <button onclick="updateVideo()">Load Video</button>
                     </div>
                 </div>
             </div>
@@ -303,11 +339,11 @@
                     <div class="controls">
                         <div class="input-group">
                             <label>Twitch Channel</label>
-                            <input type="text" id="twitchChannel" placeholder="e.g., fl0m" value="fl0m">
+                            <input type="text" id="twitchChannel" placeholder="e.g., fl0m, b0aty, shroud">
                         </div>
                         <div class="input-group">
                             <label>Kick Channel</label>
-                            <input type="text" id="kickChannel" placeholder="e.g., fl0m" value="fl0m">
+                            <input type="text" id="kickChannel" placeholder="e.g., fl0m, b0aty, odablock">
                         </div>
                         <div class="button-group">
                             <button onclick="startMergedChat()">Connect</button>
@@ -318,7 +354,7 @@
 
                     <div class="chat-container" id="chatContainer">
                         <div class="chat-message">
-                            <span class="message-content" style="color: #999;">💬 Click "Connect" to start viewing chat...</span>
+                            <span class="message-content" style="color: #999;">💬 Enter channel names above and click "Connect" to start viewing chat...</span>
                         </div>
                     </div>
 
@@ -343,7 +379,14 @@
         function updateVideo() {
             const videoId = document.getElementById('videoId').value.trim();
             if (videoId) {
-                document.getElementById('youtubeVideo').src = `https://www.youtube.com/embed/${videoId}`;
+                const videoFrame = document.getElementById('youtubeVideo');
+                const placeholder = document.getElementById('videoPlaceholder');
+                
+                videoFrame.src = `https://www.youtube.com/embed/${videoId}`;
+                videoFrame.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                updateStatus('Please enter a YouTube Video ID!', 'error');
             }
         }
 

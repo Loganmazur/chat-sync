@@ -169,6 +169,24 @@
             background: linear-gradient(135deg, #4a4a4e 0%, #3a3a3e 100%);
         }
 
+        /* Platform Toggle Buttons */
+        .platform-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .platform-toggle button {
+            flex: 1;
+            padding: 8px 12px;
+            background: #3a3a3e;
+            font-size: 13px;
+        }
+
+        .platform-toggle button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
         /* Chat Container */
         .chat-container {
             background-color: #18181b;
@@ -291,6 +309,47 @@
                 height: 400px;
             }
         }
+
+/* YouTube Theme */
+body.youtube-theme {
+    background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+}
+
+body.youtube-theme .container {
+    background-color: #1a1a1d;
+}
+
+body.youtube-theme .section-title {
+    border-bottom: 2px solid #ff0000;
+}
+
+body.youtube-theme button {
+    background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+}
+
+body.youtube-theme button:hover {
+    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+}
+
+body.youtube-theme button.secondary {
+    background: linear-gradient(135deg, #4a4a4e 0%, #3a3a3e 100%);
+}
+
+body.youtube-theme .platform-toggle button {
+    background: #3a3a3e;
+}
+
+body.youtube-theme .platform-toggle button.active {
+    background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+}
+
+body.youtube-theme input:focus {
+    border-color: #ff0000;
+}
+
+body.youtube-theme .status-bar {
+    border-left: 4px solid #ff0000;
+}
     </style>
 </head>
 <body>
@@ -307,13 +366,13 @@
                     <div class="video-placeholder" id="videoPlaceholder">
                         <div class="video-placeholder-icon">📺</div>
                         <div class="video-placeholder-text">
-                            Enter a YouTube Video ID below to start watching
+                            Select a platform and enter a channel/video ID below to start watching
                         </div>
                     </div>
 
                     <!-- Video iframe (hidden initially) -->
                     <iframe 
-                        id="youtubeVideo"
+                        id="videoPlayer"
                         width="100%" 
                         height="600" 
                         style="display: none;"
@@ -322,11 +381,29 @@
                     </iframe>
 
                     <div class="controls">
-                        <div class="input-group">
-                            <label>YouTube Video ID</label>
-                            <input type="text" id="videoId" placeholder="e.g., dQw4w9WgXcQ or Lj2J6Ar1HNo">
+                        <!-- Platform Toggle -->
+                        <div class="platform-toggle">
+                            <button class="active" id="youtubeBtn" onclick="selectPlatform('youtube')">
+                                YouTube
+                            </button>
+                            <button id="twitchBtn" onclick="selectPlatform('twitch')">
+                                Twitch
+                            </button>
                         </div>
-                        <button onclick="updateVideo()">Load Video</button>
+
+                        <!-- YouTube Input -->
+                        <div class="input-group" id="youtubeInput">
+                            <label>YouTube Video ID or URL</label>
+                            <input type="text" id="youtubeId" placeholder="e.g., dQw4w9WgXcQ or https://youtube.com/watch?v=dQw4w9WgXcQ">
+                        </div>
+
+                        <!-- Twitch Input (hidden by default) -->
+                        <div class="input-group" id="twitchInput" style="display: none;">
+                            <label>Twitch Channel</label>
+                            <input type="text" id="twitchChannel" placeholder="e.g., fl0m, xqc, shroud">
+                        </div>
+
+                        <button onclick="loadVideo()">Load Stream</button>
                     </div>
                 </div>
             </div>
@@ -336,21 +413,17 @@
                 <div class="section-card">
                     <h2 class="section-title">Merged Chat</h2>
                     
-                    <div class="controls">
-                        <div class="input-group">
-                            <label>Twitch Channel</label>
-                            <input type="text" id="twitchChannel" placeholder="e.g., fl0m, b0aty, shroud">
-                        </div>
-                        <div class="input-group">
-                            <label>Kick Channel</label>
-                            <input type="text" id="kickChannel" placeholder="e.g., fl0m, b0aty, odablock">
-                        </div>
-                        <div class="button-group">
-                            <button onclick="startMergedChat()">Connect</button>
-                            <button class="secondary" onclick="stopMergedChat()">Stop</button>
-                            <button class="secondary" onclick="clearChat()">Clear</button>
-                        </div>
-                    </div>
+<div class="controls">
+    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <input type="text" id="chatTwitchChannel" placeholder="Twitch" style="flex: 1; padding: 8px; font-size: 13px;">
+        <input type="text" id="chatKickChannel" placeholder="Kick" style="flex: 1; padding: 8px; font-size: 13px;">
+    </div>
+    <div class="button-group">
+        <button onclick="startMergedChat()">Connect</button>
+        <button class="secondary" onclick="stopMergedChat()">Stop</button>
+        <button class="secondary" onclick="clearChat()">Clear</button>
+    </div>
+</div>
 
                     <div class="chat-container" id="chatContainer">
                         <div class="chat-message">
@@ -374,21 +447,73 @@
         let kickPusher = null;
         let kickChannel = null;
         let isRunning = false;
+        let selectedPlatform = 'youtube'; // Default platform
 
-        // Update YouTube video
-        function updateVideo() {
-            const videoId = document.getElementById('videoId').value.trim();
-            if (videoId) {
-                const videoFrame = document.getElementById('youtubeVideo');
-                const placeholder = document.getElementById('videoPlaceholder');
-                
-                videoFrame.src = `https://www.youtube.com/embed/${videoId}`;
-                videoFrame.style.display = 'block';
-                placeholder.style.display = 'none';
+        // Platform selection
+        function selectPlatform(platform) {
+            selectedPlatform = platform;
+            
+            // Update button styles
+            document.getElementById('youtubeBtn').classList.remove('active');
+            document.getElementById('twitchBtn').classList.remove('active');
+            document.getElementById(platform + 'Btn').classList.add('active');
+            
+            // Toggle input visibility
+            if (platform === 'youtube') {
+                document.getElementById('youtubeInput').style.display = 'block';
+                document.getElementById('twitchInput').style.display = 'none';
             } else {
-                updateStatus('Please enter a YouTube Video ID!', 'error');
+                document.getElementById('youtubeInput').style.display = 'none';
+                document.getElementById('twitchInput').style.display = 'block';
             }
         }
+
+// Load video based on selected platform
+function loadVideo() {
+    const videoPlayer = document.getElementById('videoPlayer');
+    const placeholder = document.getElementById('videoPlaceholder');
+    
+    if (selectedPlatform === 'youtube') {
+        const input = document.getElementById('youtubeId').value.trim();
+        if (input) {
+            // Extract video ID from various YouTube URL formats
+            let videoId = input;
+            
+            // Check if it's a full URL
+            if (input.includes('youtube.com') || input.includes('youtu.be')) {
+                // Handle youtube.com/watch?v=VIDEO_ID
+                const match1 = input.match(/[?&]v=([^&]+)/);
+                // Handle youtu.be/VIDEO_ID
+                const match2 = input.match(/youtu\.be\/([^?]+)/);
+                // Handle youtube.com/embed/VIDEO_ID
+                const match3 = input.match(/embed\/([^?]+)/);
+                
+                videoId = match1?.[1] || match2?.[1] || match3?.[1] || input;
+            }
+            
+            videoPlayer.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+            videoPlayer.style.display = 'block';
+            placeholder.style.display = 'none';
+            
+            // Apply YouTube theme
+            document.body.classList.add('youtube-theme');
+        } else {
+            updateStatus('Please enter a YouTube Video ID or URL!', 'error');
+        }
+    } else if (selectedPlatform === 'twitch') {
+        const channel = document.getElementById('twitchChannel').value.trim();
+        if (channel) {
+            videoPlayer.src = `https://player.twitch.tv/?channel=${channel}&parent=localhost&autoplay=true`;
+            videoPlayer.style.display = 'block';
+            placeholder.style.display = 'none';
+            
+            // Remove YouTube theme (back to purple)
+            document.body.classList.remove('youtube-theme');
+        } else {
+            updateStatus('Please enter a Twitch channel name!', 'error');
+        }
+    }
+}
 
         // Add message to chat
         function addMessage(platform, author, message) {
@@ -437,8 +562,8 @@
                 return;
             }
 
-            const twitchChannelName = document.getElementById('twitchChannel').value.trim().toLowerCase();
-            const kickChannelName = document.getElementById('kickChannel').value.trim().toLowerCase();
+            const twitchChannelName = document.getElementById('chatTwitchChannel').value.trim().toLowerCase();
+            const kickChannelName = document.getElementById('chatKickChannel').value.trim().toLowerCase();
 
             if (!twitchChannelName && !kickChannelName) {
                 updateStatus('Please enter at least one channel!', 'error');
